@@ -1,0 +1,53 @@
+---
+title: "Lựa chọn mô hình và lựa chọn biến"
+author:
+  - "Trần Việt Hà"
+  - "Nguyễn Đình Mai Vi"
+  - "Vũ Hà Thư"
+date: "`r format(Sys.Date(), '%d/%m/%Y')`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+    keep_tex: false
+  html_document:
+    toc: true
+    df_print: paged
+fontsize: 11pt
+geometry: margin=2.5cm
+mainfont: "Times New Roman"
+header-includes:
+  - \usepackage{float}
+  - \usepackage{amsmath}
+  - \usepackage{amssymb}
+  - \usepackage{booktabs}
+editor_options: 
+  markdown:   
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+
+```{r child="parts/DatVanDe.Rmd"}
+```
+
+```{r child="parts/TieuChuanLuaChonBien.Rmd"}
+```
+
+```{r child="parts/PhuongPhapLuaChonMoHinh&KiemChungCheo.Rmd"}
+```
+
+```{r child="parts/DienGiaiMoHinhBangDatasetMau.Rmd"}
+```
+
+```{r child="parts/Tailieuthamkhao.Rmd"}
+```
