@@ -14,43 +14,43 @@ thiện bổ sung lớn nhất cho mô hình sẽ được thêm vào.
 **Bắt đầu**
 
 - Từ mô hình rỗng (Null Model). Lúc này mô hình chỉ chứa duy nhất hệ số
-  chặn (Intercept / ‭$\beta_0$‬).<br>
-- Trạng thái mô hình: ‭$Y = \beta_0$‬‭‬<br>
-- Tập hợp biến trong mô hình (‭$S_{\text{in}}$‬): Rỗng (‭$\emptyset$‬).<br>
-- Tập hợp biến ngoài phòng chờ (‭$S_{\text{out}}$‬): Chứa toàn bộ các biến
-  ‭$\{X_1, X_2, \dots, X_p\}$‬‭‬‭‬ ‭‬‭‬ ‭‬‭‬ ‭‬‭‬.<br>
+  chặn (Intercept / $\beta_0$).<br>
+- Trạng thái mô hình: $Y = \beta_0$<br>
+- Tập hợp biến trong mô hình ($S_{\text{in}}$): Rỗng ($\emptyset$).<br>
+- Tập hợp biến ngoài phòng chờ ($S_{\text{out}}$): Chứa toàn bộ các biến
+  $\{X_1, X_2, \dots, X_p\}$   .<br>
 
 **Quy trình đi từng bước**
 
 **Bước 1: Đánh giá độc lập:**
 
-- Máy tính chạy thử nghiệm độc lập từng biến ‭$X_i$‬ thuộc tập
-  ‭$S_{\text{out}}$‬ bằng cách bắt cặp với mô hình hiện tại.<br>
+- Máy tính chạy thử nghiệm độc lập từng biến $X_i$ thuộc tập
+  $S_{\text{out}}$ bằng cách bắt cặp với mô hình hiện tại.<br>
 
 - Đo lường mức độ cải thiện mô hình của từng biến dựa trên một tiêu
   chuẩn định lượng cố định (ví dụ: biến làm giảm AIC/BIC nhiều nhất,
   hoặc biến có p-value nhỏ nhất,..).
 
 - Tìm ra biến đáp ứng được tiêu chuẩn đề ra tốt nhất, gọi là
-  ‭$X_{\text{best}}$‬
+  $X_{\text{best}}$
 
 **Bước 2: Ra quyết định:**
 
-- Nếu chỉ số của ‭$X_{\text{best}}$‬ vượt qua ngưỡng kiểm định được thiết
-  lập trước (Ví dụ: ‭$p\text{-value} \le \alpha_{\text{enter}}$‬‭‬‭‬ hoặc
-  ‭$\Delta \text{AIC} < 0$‬‭‬‭‬), thì thuật toán chính thức nạp
-  ‭$X_{\text{best}}$‬ vào mô hình.
+- Nếu chỉ số của $X_{\text{best}}$ vượt qua ngưỡng kiểm định được thiết
+  lập trước (Ví dụ: $p\text{-value} \le \alpha_{\text{enter}}$ hoặc
+  $\Delta \text{AIC} < 0$), thì thuật toán chính thức nạp
+  $X_{\text{best}}$ vào mô hình.
 
-- Cập nhật trạng thái: Chuyển ‭$X_{\text{best}}$‬ từ tập ‭$S_{\text{out}}$‬
-  sang tập ‭$S_{\text{in}}$‬.
+- Cập nhật trạng thái: Chuyển $X_{\text{best}}$ từ tập $S_{\text{out}}$
+  sang tập $S_{\text{in}}$.
 
 - Trạng thái mô hình lúc này:
-  ‭$Y = \beta_0 + \beta_{\text{best}} X_{\text{best}}$‬‭‬‭‬‭‬
+  $Y = \beta_0 + \beta_{\text{best}} X_{\text{best}}$
 
 **Bước 3: Lặp lại vòng lặp**
 
-- Cố định các biến đã ở trong tập ‭$S_{\text{in}}$‬. Tiếp tục thử nghiệm
-  bắt cặp với các biến còn lại trong tập ‭$S_{\text{out}}$‬ để tìm ra biến
+- Cố định các biến đã ở trong tập $S_{\text{in}}$. Tiếp tục thử nghiệm
+  bắt cặp với các biến còn lại trong tập $S_{\text{out}}$ để tìm ra biến
   phối hợp bổ trợ tốt nhất với các biến đã được chọn từ trước.<br>
 
 - Điều kiện dừng: Nếu tại một bước nào đó, khi thử nạp bất kỳ biến nào
@@ -60,7 +60,7 @@ thiện bổ sung lớn nhất cho mô hình sẽ được thêm vào.
 
 Tổng số mô hình tối đa phải chạy: <br>
 
-‭$$\text{Total}_{\text{Forward}} = p + (p-1) + (p-2) + \dots + 1 = \frac{p(p+1)}{2}$$
+$$\text{Total}_{\text{Forward}} = p + (p-1) + (p-2) + \dots + 1 = \frac{p(p+1)}{2}$$
 
 ### Phân tích ưu và nhược điểm
 
@@ -88,7 +88,7 @@ Tổng số mô hình tối đa phải chạy: <br>
 
 ### Nguyên lý hoạt động:
 
-Bắt đầu với mô hình đầy đủ chứa toàn bộ ‭$p$‬ biến dự báo, và sau đó loại
+Bắt đầu với mô hình đầy đủ chứa toàn bộ $p$ biến dự báo, và sau đó loại
 bỏ dần biến dự báo ít hữu ích nhất tại mỗi bước. Thuật toán sẽ chính
 thức chạm đến điểm dừng khi tại bước rà soát hiện tại, không có biến nào
 trong mô hình vi phạm ngưỡng ý nghĩa thống kê thiết lập trước
@@ -100,34 +100,34 @@ trong mô hình vi phạm ngưỡng ý nghĩa thống kê thiết lập trước
 - Mô hình đầy đủ (Full Model). Lúc này mô hình lấy tất cả các biến độc
   lập cùng một lúc.
 - Trạng thái mô hình:
-  ‭$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots + \beta_p X_p$‬‭‬‭‬‭‬‭‬‭‬
-- Tập hợp biến trong mô hình (‭$S_{\text{in}}$‬): Chứa tất cả các biến
-  ‭$\{X_1, X_2, \dots, X_p\}$‬‭‬‭‬ ‭‬‭‬ ‭‬‭‬ ‭‬‭‬.
-- Tập hợp biến đã bị loại (‭$S_{\text{out}}$‬): Rỗng (‭$\emptyset$‬).
+  $Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots + \beta_p X_p$
+- Tập hợp biến trong mô hình ($S_{\text{in}}$): Chứa tất cả các biến
+  $\{X_1, X_2, \dots, X_p\}$   .
+- Tập hợp biến đã bị loại ($S_{\text{out}}$): Rỗng ($\emptyset$).
 
 **Quy trình đi từng bước**
 
 **Bước 1: Đánh giá tập thể:**
 
 - Máy tính chạy mô hình hồi quy với toàn bộ các biến đang có mặt trong
-  tập ‭$S_{\text{in}}$‬.
+  tập $S_{\text{in}}$.
 - Nó rà soát chỉ số đóng góp của từng biến số trong mối tương quan với
   các biến còn lại (thường dựa vào p-value của kiểm định t).
 - Tìm ra biến có đóng góp thấp nhất (theo giả thuyết đặt ra ban đầu),
-  gọi là ‭$X_{\text{worst}}$‬.
+  gọi là $X_{\text{worst}}$.
 
 **Bước 2: Ra quyết định:**
 
-- Nếu chỉ số của ‭$X_{\text{worst}}$‬ vi phạm ngưỡng an toàn, thì thuật
-  toán xoá bỏ ‭$X_{\text{worst}}$‬ ra khỏi mô hình.
-- Cập nhật trạng thái: Loại trừ ‭$X_{\text{worst}}$‬ từ tập
-  ‭$S_{\text{in}}$‬ ra tập ‭$S_{\text{out}}$‬.
+- Nếu chỉ số của $X_{\text{worst}}$ vi phạm ngưỡng an toàn, thì thuật
+  toán xoá bỏ $X_{\text{worst}}$ ra khỏi mô hình.
+- Cập nhật trạng thái: Loại trừ $X_{\text{worst}}$ từ tập
+  $S_{\text{in}}$ ra tập $S_{\text{out}}$.
 - Trạng thái mô hình lúc này: Rút bớt đi một biến độc lập.
 
 **Bước 3: Tái cấu trúc vòng lặp**
 
 - Máy tính bắt buộc phải xây dựng lại một mô hình hồi quy mới với các
-  biến còn lại trong tập ‭$S_{\text{in}}$‬. Việc phân phối dữ liệu trong
+  biến còn lại trong tập $S_{\text{in}}$. Việc phân phối dữ liệu trong
   mô hình thay đổi, dẫn đến các biến sẽ có p-value mới. Thuật toán lại
   lặp lại Bước 1 để tìm biến tiếp theo có đóng góp thấp nhất trong mô
   hình và tiếp tục loại bỏ nếu vi phạm giả thuyết.
@@ -138,9 +138,9 @@ trong mô hình vi phạm ngưỡng ý nghĩa thống kê thiết lập trước
   việc loại bỏ đi các biến này sẽ làm cho hiệu quả của mô hình thấp
   hơn).
 
-‭$$\text{Total}_{\text{Backward}} = 1 + p + (p-1) + (p-2) + \dots + 2 = 1 + \frac{(p+2)(p-1)}{2}$$‬
+$$\text{Total}_{\text{Backward}} = 1 + p + (p-1) + (p-2) + \dots + 2 = 1 + \frac{(p+2)(p-1)}{2}$$
 
-(Công thức này xấp xỉ bằng ‭$\frac{p(p+1)}{2}$‬ giống như Forward).
+(Công thức này xấp xỉ bằng $\frac{p(p+1)}{2}$ giống như Forward).
 
 ### Phân tích ưu và nhược điểm
 
@@ -186,29 +186,29 @@ mãn điều kiện loại ra.
 
 - Mô hình rỗng (Null Model) (giống Forward).
 
-- Trạng thái mô hình: ‭$Y = \beta_0$‬‭‬
+- Trạng thái mô hình: $Y = \beta_0$
 
 - Hai ngưỡng thiết lập bắt buộc: Ngưỡng đầu vào
-  (‭$\alpha_{\text{enter}}$‬) và Ngưỡng loại trừ
-  (‭$\alpha_{\text{remove}}$‬).
+  ($\alpha_{\text{enter}}$) và Ngưỡng loại trừ
+  ($\alpha_{\text{remove}}$).
 
-- Điều kiện: ‭$\alpha_{\text{enter}} < \alpha_{\text{remove}}$‬
+- Điều kiện: $\alpha_{\text{enter}} < \alpha_{\text{remove}}$
 
 **Quy trình đi từng bước (Chu kỳ lặp kép):**
 
 **Pha 1: Thêm biến (Forward Step):**
 
-- Thuật toán quét qua tập biến ngoài mô hình ‭$S_{\text{out}}$‬, tìm biến
-  ‭$X_{\text{best}}$‬ tốt nhất.
+- Thuật toán quét qua tập biến ngoài mô hình $S_{\text{out}}$, tìm biến
+  $X_{\text{best}}$ tốt nhất.
 
-- Nếu ‭$X_{\text{best}}$‬ thoả mãn điều kiện đầu vào
-  (‭$\le \alpha_{\text{enter}}$‬), thì thêm nó vào tập ‭$S_{\text{in}}$‬ .
+- Nếu $X_{\text{best}}$ thoả mãn điều kiện đầu vào
+  ($\le \alpha_{\text{enter}}$), thì thêm nó vào tập $S_{\text{in}}$ .
 
 **Pha 2: Kiểm tra nội bộ (Backward Step)**
 
 - Ngay sau khi có biến mới vào mô hình, sự phân phối dữ liệu trong mô
   hình thay đổi. Máy tính lập tức dừng lại, chạy lại mô hình với tập
-  ‭$S_{\text{in}}$‬ mới và quét một lượt các tiêu chuẩn (tiêu chuẩn đặt ra
+  $S_{\text{in}}$ mới và quét một lượt các tiêu chuẩn (tiêu chuẩn đặt ra
   từ đầu để quyết định chọn biến) của tất cả các biến đang có mặt ở
   trong mô hình (bao gồm cả những biến cũ và biến mới được thêm vào).
 
@@ -216,21 +216,21 @@ mãn điều kiện loại ra.
   giá trị của một biến cũ.
 
 - Nếu phát hiện có bất kỳ biến cũ nào bị vượt ngưỡng đầu ra
-  (‭$> \alpha_{\text{remove}}$‬), thì thuật toán lập tức xóa biến cũ đó ra
-  ngoài tập ‭$S_{\text{out}}$‬.
+  ($> \alpha_{\text{remove}}$), thì thuật toán lập tức xóa biến cũ đó ra
+  ngoài tập $S_{\text{out}}$.
 
 **Điều kiện dừng:**
 
 - Thuật toán lặp đi lặp lại chu kỳ kép này liên tục. Nó sẽ chính thức
   dừng lại khi chạm đến điểm cân bằng động: nếu ở ngoài không còn bất kỳ
   biến nào đủ tốt để thỏa mãn tiêu chuẩn bước vào
-  (‭$\le \alpha_{\text{enter}}$‬), đồng thời ở bên trong không còn bất cứ
-  biến nào vi phạm tiêu chuẩn đầu ra (‭$> \alpha_{\text{remove}}$‬), thì
+  ($\le \alpha_{\text{enter}}$), đồng thời ở bên trong không còn bất cứ
+  biến nào vi phạm tiêu chuẩn đầu ra ($> \alpha_{\text{remove}}$), thì
   mô hình đạt trạng thái tối ưu cuối cùng và kết thúc thuật toán.
 
 Tổng số mô hình tối đa mà Stepwise phải tính toán là:
 
-‭$$\text{Total}_{\text{Stepwise}} \approx p^2$$‬‭‬
+$$\text{Total}_{\text{Stepwise}} \approx p^2$$
 
 ### Phân tích ưu và nhược điểm
 
@@ -366,7 +366,7 @@ $$CV_{(n)} = \frac{1}{n} \sum_{i=1}^{n} MSE_i$$
 #### Ưu điểm
 
 Không bị thiên vị (bias thấp) vì mô hình được học gần như toàn bộ dữ
-liệu (‭$n-1$ dòng). Kết quả LOOCV là duy nhất và ổn định, không bị yếu tố
+liệu ($n-1$ dòng). Kết quả LOOCV là duy nhất và ổn định, không bị yếu tố
 chia mẫu ngẫu nhiên chi phối.
 
 #### Nhược điểm
