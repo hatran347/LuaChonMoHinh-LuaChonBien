@@ -1,1 +1,26 @@
+**Đặt vấn đề**
 
+Xét mô hình hồi quy tuyến tính bội với $n$ quan sát và $p$ biến dự báo:
+\begin{equation}
+Y_i = \beta_0 + \beta_1 X_{i1} + \dots + \beta_p X_{ip} + \varepsilon_i,\qquad 
+\varepsilon_i \stackrel{\text{iid}}{\sim} \mathcal{N}(0,\sigma^2)
+\end{equation}
+
+Trong xây dựng mô hình, việc đưa thêm nhiều biến không phải lúc nào cũng
+giúp mô hình tốt hơn. Nếu chỉ dựa vào các thước đo như **SSE** hay
+$R^2$, mô hình lớn thường được ưu tiên vì việc thêm biến không làm các
+chỉ số này xấu đi. Tuy nhiên, điều này có thể dẫn đến **quá khớp**, **đa
+cộng tuyến** và làm mô hình trở nên khó diễn giải.
+
+Vì vậy, bài toán lựa chọn biến nhằm tìm ra một tập biến phù hợp, vừa đảm
+bảo khả năng giải thích/dự báo, vừa giữ mô hình đủ đơn giản. Để làm được
+điều này, cần xem xét hai vấn đề chính:
+
+1.  **Tiêu chí đánh giá mô hình:** sử dụng các tiêu chuẩn như
+    $R^2_{adj}$, $C_p$, AIC, BIC để cân bằng giữa độ khớp và độ phức tạp
+    của mô hình.
+
+2.  **Thủ tục tìm kiếm mô hình:** khi có $p$ biến ứng viên, số mô hình
+    con có thể lên đến $2^p$, nên cần các phương pháp như **Forward
+    Selection, Backward Elimination** và **Stepwise Selection** để tìm
+    mô hình phù hợp.
