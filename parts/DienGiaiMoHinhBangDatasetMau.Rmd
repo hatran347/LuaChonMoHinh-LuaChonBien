@@ -1,1 +1,554 @@
+# Diễn giải mô hình bằng Dataset mẫu:
 
+Để minh họa cho bài toán lựa chọn mô hình và lựa chọn biến, báo cáo sử
+dụng bộ dữ liệu `diabetes` trong R. Đây là bộ dữ liệu thường được dùng
+trong các ví dụ về hồi quy tuyến tính. Biến phụ thuộc là $y$, biểu thị
+mức độ tiến triển của bệnh tiểu đường sau một năm. Các biến giải thích
+bao gồm một số đặc điểm sinh lý và chỉ số xét nghiệm của bệnh nhân, như
+tuổi, giới tính, chỉ số khối cơ thể, huyết áp trung bình và các chỉ số
+huyết thanh.
+
+Mục tiêu của phần thực nghiệm là xây dựng mô hình hồi quy tuyến tính để
+dự báo $y$, đồng thời so sánh các tiêu chuẩn lựa chọn biến như $R^2$,
+$R^2_{adj}$, Mallows' $C_p$, AIC và BIC.
+
+Mô hình hồi quy tuyến tính tổng quát được xét có dạng:
+
+$$y_i = \beta_0 + \beta_1x_{i1} + \beta_2x_{i2} + \cdots + \beta_px_{ip} + \varepsilon_i$$
+
+Trong đó:
+
+- $y_i$: giá trị biến phụ thuộc của quan sát thứ $i$;
+- $x_{ij}$: giá trị của biến giải thích thứ $j$ tại quan sát thứ $i$;
+- $\beta_0$: hệ số chặn của mô hình;
+- $\beta_j$: hệ số hồi quy tương ứng với biến giải thích thứ $j$;
+- $\varepsilon_i$: sai số ngẫu nhiên, thường được giả định có kỳ vọng
+  bằng 0 và phương sai không đổi.
+
+```{r, echo=FALSE}
+library(lars)
+library(leaps)
+library(boot)
+library(scales)
+
+data(diabetes)
+df <- as.data.frame(cbind(diabetes$x, target = diabetes$y))
+summary(df)
+```
+
+Bộ dữ liệu gồm 10 biến giải thích và 1 biến phụ thuộc `target`. Các biến
+giải thích đã được chuẩn hóa nên có giá trị trung bình xấp xỉ 0. Biến
+`target` dao động từ 25 đến 346, với trung bình khoảng 152.1, cho thấy
+mức độ tiến triển bệnh tiểu đường có sự khác biệt đáng kể giữa các bệnh
+nhân.
+
+## Quy trình thực nghiệm
+
+Trong phần thực nghiệm, dữ liệu được chia thành hai tập: tập train và
+tập test. Tập train chiếm 80% số quan sát và được sử dụng để xây dựng mô
+hình, lựa chọn biến và ước lượng các hệ số hồi quy. Tập test chiếm 20%
+số quan sát còn lại và được sử dụng để đánh giá khả năng dự báo ngoài
+mẫu của mô hình.
+
+Quy trình thực nghiệm trong báo cáo gồm các bước sau:
+
+1.  Chia dữ liệu thành 2 tập train/test theo tỉ lệ 80:20
+2.  Xây dựng mô hình hồi quy tuyến tính đầy đủ trên tập train.
+3.  Thực hiện lựa chọn biến bằng các tiêu chuẩn như $R^2$, $R^2_{adj}$,
+    Mallows' $C_p$, AIC và BIC.
+4.  So sánh các mô hình được chọn theo từng tiêu chuẩn.
+5.  Diễn giải mô hình cuối cùng.
+6.  Đánh giá mô hình trên tập test bằng RMSE, MAE và test $R^2$.
+
+```{r}
+set.seed(347)
+
+# Chia train:test theo tỉ lệ 80:20
+train_index <- sample(1:nrow(df), size = 0.8 * nrow(df))
+
+train_data <- df[train_index, ]
+test_data  <- df[-train_index, ]
+
+dim(train_data)
+dim(test_data)
+```
+
+## Khám phá dữ liệu và mô hình hồi quy đầy đủ
+
+### Tổng quan
+
+Trước khi lựa chọn biến, báo cáo tiến hành khám phá dữ liệu để quan sát
+mối quan hệ giữa biến phụ thuộc `target` và các biến giải thích
+
+```{r, echo=FALSE}
+library(ggplot2)
+library(tidyr)
+
+train_data %>%
+  pivot_longer(cols = -target, names_to = "variable", values_to = "value") %>%
+  ggplot(aes(x = value, y = target)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ variable, scales = "free_x") +
+  labs(
+    title = "Quan hệ giữa target và từng biến giải thích",
+    x = "Biến",
+    y = "target"
+  )
+
+
+```
+
+Từ các biểu đồ phân tán, có thể thấy bmi, map và ltg có xu hướng tuyến
+tính dương tương đối rõ với target, trong khi hdl có xu hướng âm. Các
+biến còn lại thể hiện mối quan hệ yếu hơn hoặc không rõ ràng.Scatter
+plot này giúp nhận diện sơ bộ các biến có khả năng liên quan đến target
+trước khi xây dựng mô hình hồi quy.
+
+```{r}
+library(corrplot)
+
+cor_matrix <- cor(train_data)
+
+corrplot(
+  cor_matrix,
+  method = "color",
+  type = "upper",
+  tl.cex = 0.8,
+  addCoef.col = "black",
+  number.cex = 0.6
+)
+```
+
+Ma trận tương quan cho thấy biến target có tương quan dương tương đối rõ
+với các biến ltg, bmi, map, glu và tch. Trong đó, ltg và bmi là hai biến
+có tương quan cao nhất với target. Ngược lại, hdl có tương quan âm với
+target, còn sex gần như không có tương quan tuyến tính đơn biến với
+target.
+
+Một số cặp biến độc lập có tương quan cao, đặc biệt là tc và ldl, cho
+thấy có thể tồn tại hiện tượng đa cộng tuyến. Do đó, việc lựa chọn biến
+là cần thiết để xây dựng mô hình gọn hơn, tránh sử dụng nhiều biến mang
+thông tin trùng lặp.
+
+#### Mô hình đẩy đủ biến
+
+```{r}
+full_model <- lm(target ~ ., data = train_data)
+
+summary(full_model)
+```
+
+Mô hình đầy đủ có ý nghĩa thống kê tổng thể với p-value của kiểm định F
+nhỏ hơn 2.2e-16. Giá trị $R^2 = 0.5075$ cho thấy mô hình giải thích được
+khoảng 50.75% biến thiên của `target`, trong khi $R^2_{adj} = 0.4931$
+cho thấy sau khi điều chỉnh theo số lượng biến, tỷ lệ giải thích còn
+khoảng 49.31%.
+
+Trong các biến độc lập, `sex`, `bmi`, `map` và `ltg` có ý nghĩa thống kê
+ở mức 5%. Các biến `bmi`, `map` và `ltg` có tác động cùng chiều đến
+`target`, còn `sex` có tác động ngược chiều. Các biến còn lại có p-value
+lớn hơn 0.05 nên chưa cho thấy ảnh hưởng riêng lẻ rõ ràng trong mô hình.
+
+Do mô hình đầy đủ sử dụng toàn bộ 10 biến nhưng chỉ một số biến có ý
+nghĩa thống kê, mô hình có thể chưa tối ưu về độ gọn. Vì vậy, cần áp
+dụng các tiêu chuẩn lựa chọn biến để tìm mô hình phù hợp hơn.
+
+## Lựa chọn mô hình và lựa chọn biến
+
+Sau khi xây dựng mô hình hồi quy đầy đủ, báo cáo tiến hành lựa chọn mô
+hình và lựa chọn biến. Mục tiêu của bước này là tìm mô hình có sự cân
+bằng giữa độ khớp và độ phức tạp, thay vì chỉ chọn mô hình có nhiều biến
+nhất.
+
+### Best subset selection
+
+```{r, echo=FALSE}
+library(leaps)
+
+best_subset <- regsubsets(target ~ ., data = train_data, nvmax = 10) 
+best_summary <- summary(best_subset)
+
+# Tính AIC cho mô hình tốt nhất ở từng số lượng biến
+aic_values <- numeric(10)
+
+for (i in 1:10) {
+  vars_i <- names(coef(best_subset, i))[-1]
+  formula_i <- as.formula(paste("target ~", paste(vars_i, collapse = " + ")))
+  model_i <- lm(formula_i, data = train_data)
+  aic_values[i] <- AIC(model_i)
+}
+
+# table tổng hợp các criteria
+criteria_table <- data.frame(
+  Subset_size = 1:10,
+  R2 = best_summary$rsq,
+  Adj_R2 = best_summary$adjr2,
+  Cp = best_summary$cp,
+  AIC = aic_values,
+  BIC = best_summary$bic
+)
+
+
+round(criteria_table, 4)
+```
+
+Bảng tóm tắt mô hình tối ưu theo từng tiêu chí:
+
+```{r, echo=FALSE}
+best_r2_size <- which.max(best_summary$rsq)
+best_adjr2_size <- which.max(best_summary$adjr2)
+best_cp_size <- which.min(best_summary$cp)
+best_aic_size <- which.min(aic_values)
+best_bic_size <- which.min(best_summary$bic)
+
+vars_r2 <- names(coef(best_subset, best_r2_size))[-1]
+vars_adjr2 <- names(coef(best_subset, best_adjr2_size))[-1]
+vars_cp <- names(coef(best_subset, best_cp_size))[-1]
+vars_aic <- names(coef(best_subset, best_aic_size))[-1]
+vars_bic <- names(coef(best_subset, best_bic_size))[-1]
+
+best_model_summary <- data.frame(
+  Criterion = c(
+    "R2 lon nhat",
+    "Adjusted R2 lon nhat",
+    "Cp nho nhat",
+    "AIC nho nhat",
+    "BIC nho nhat"
+  ),
+  Subset_size = c(
+    best_r2_size,
+    best_adjr2_size,
+    best_cp_size,
+    best_aic_size,
+    best_bic_size
+  ),
+  Predictors = c(
+    paste(vars_r2, collapse = ", "),
+    paste(vars_adjr2, collapse = ", "),
+    paste(vars_cp, collapse = ", "),
+    paste(vars_aic, collapse = ", "),
+    paste(vars_bic, collapse = ", ")
+  ),
+  Value = c(
+    max(best_summary$rsq),
+    max(best_summary$adjr2),
+    min(best_summary$cp),
+    min(aic_values),
+    min(best_summary$bic)
+  )
+)
+
+best_model_summary
+```
+
+Kết quả trên cho thấy mỗi tiêu chuẩn có thể lựa chọn mô hình khác nhau.
+Tiêu chuẩn $R^2$ có xu hướng chọn mô hình nhiều biến nhất vì $R^2$ không
+giảm khi thêm biến. Ngược lại, Adjusted $R^2$, Mallows' $C_p$, AIC và
+BIC có cơ chế phạt độ phức tạp nên thường chọn mô hình gọn hơn.
+
+### Forward Selection
+
+```{r}
+# Forward selection
+null_model <- lm(target ~ 1, data = train_data)
+
+forward_model <- step(
+  null_model,
+  scope = list(lower = null_model, upper = full_model),
+  direction = "forward",
+  trace = TRUE
+)
+
+
+summary_forward <- summary(forward_model)
+
+
+adj_r2 <- summary_forward$adj.r.squared #R2 adj
+
+# Mallows' Cp
+rss_forward <- sum(residuals(forward_model)^2) #RSS
+sigma2_full <- summary(full_model)$sigma^2 #phuong sai
+n <- nrow(train_data)
+p_forward <- length(coef(forward_model)) 
+# Cp = RSS / sigma2_full - (n - 2p)
+cp_forward <- rss_forward / sigma2_full - (n - 2 * p_forward)
+
+
+cat("Forward selection model:\n")
+cat("Adjusted R-squared:", round(adj_r2, 4), "\n")
+cat("Mallows' Cp:", round(cp_forward, 4), "\n")
+cat("AIC:", round(AIC(forward_model), 2), "\n")
+cat("BIC:", round(BIC(forward_model), 2), "\n")
+
+summary_forward
+```
+
+### Backward Elimination
+
+```{r}
+backward_model <- step(
+  full_model,
+  direction = "backward",
+  trace = TRUE
+)
+
+summary_backward <- summary(backward_model)
+
+adj_r2_backward <- summary_backward$adj.r.squared # R2 adj
+
+# Mallows' Cp
+rss_backward <- sum(residuals(backward_model)^2) # RSS
+sigma2_full <- summary(full_model)$sigma^2 # phương sai từ full model
+n <- nrow(train_data)
+p_backward <- length(coef(backward_model)) # số tham số, bao gồm intercept
+
+# Cp = RSS / sigma2_full - (n - 2p)
+cp_backward <- rss_backward / sigma2_full - (n - 2 * p_backward)
+
+cat("Backward selection model:\n")
+cat("Adjusted R-squared:", round(adj_r2_backward, 4), "\n")
+cat("Mallows' Cp:", round(cp_backward, 4), "\n")
+cat("AIC:", round(AIC(backward_model), 2), "\n")
+cat("BIC:", round(BIC(backward_model), 2), "\n")
+
+summary_backward
+```
+
+### Stepwise selection
+
+```{r}
+
+stepwise_model <- step(
+  null_model,
+  scope = list(lower = null_model, upper = full_model),
+  direction = "both",
+  trace = TRUE
+)
+
+
+summary(stepwise_model)
+
+# Tính Adj R-squared và Mallows' Cp
+summary_stepwise <- summary(stepwise_model)
+adj_r2_stepwise <- summary_stepwise$adj.r.squared
+
+# Mallows' Cp
+rss_stepwise <- sum(residuals(stepwise_model)^2)
+sigma2_full <- summary(full_model)$sigma^2
+n <- nrow(train_data)
+p_stepwise <- length(coef(stepwise_model))
+cp_stepwise <- rss_stepwise / sigma2_full - (n - 2 * p_stepwise)
+
+# In kết quả
+cat("\nStepwise selection model:\n")
+cat("Adjusted R-squared:", round(adj_r2_stepwise, 4), "\n")
+cat("Mallows' Cp:", round(cp_stepwise, 4), "\n")
+cat("AIC:", round(AIC(stepwise_model), 2), "\n")
+cat("BIC:", round(BIC(stepwise_model), 2), "\n")
+```
+
+### Lựa chọn mô hình
+
+```{r, echo=FALSE}
+formula_bic <- as.formula(paste("target ~", paste(vars_bic, collapse = " + ")))
+formula_adjr2 <- as.formula(paste("target ~", paste(vars_adjr2, collapse = " + ")))
+formula_cp <- as.formula(paste("target ~", paste(vars_cp, collapse = " + ")))
+
+model_bic <- lm(formula_bic, data = train_data)
+model_adjr2 <- lm(formula_adjr2, data = train_data)
+model_cp <- lm(formula_cp, data = train_data)
+
+compare_models <- data.frame(
+  Method = c(
+    "Full model",
+    "Best subset theo BIC",
+    "Best subset theo Adjusted R2",
+    "Best subset theo Cp",
+    "Forward AIC",
+    "Backward AIC",
+    "Stepwise AIC"
+  ),
+  
+  Predictors = c(
+    paste(names(coef(full_model))[-1], collapse = ", "),
+    paste(vars_bic, collapse = ", "),
+    paste(vars_adjr2, collapse = ", "),
+    paste(vars_cp, collapse = ", "),
+    paste(names(coef(forward_model))[-1], collapse = ", "),
+    paste(names(coef(backward_model))[-1], collapse = ", "),
+    paste(names(coef(stepwise_model))[-1], collapse = ", ")
+  ),
+  
+  Num_predictors = c(
+    length(coef(full_model)) - 1,
+    length(vars_bic),
+    length(vars_adjr2),
+    length(vars_cp),
+    length(coef(forward_model)) - 1,
+    length(coef(backward_model)) - 1,
+    length(coef(stepwise_model)) - 1
+  ),
+  
+  AIC = c(
+    AIC(full_model),
+    AIC(model_bic),
+    AIC(model_adjr2),
+    AIC(model_cp),
+    AIC(forward_model),
+    AIC(backward_model),
+    AIC(stepwise_model)
+  ),
+  
+  BIC = c(
+    BIC(full_model),
+    BIC(model_bic),
+    BIC(model_adjr2),
+    BIC(model_cp),
+    BIC(forward_model),
+    BIC(backward_model),
+    BIC(stepwise_model)
+  ),
+  
+  Adj_R2 = c(
+    summary(full_model)$adj.r.squared,
+    summary(model_bic)$adj.r.squared,
+    summary(model_adjr2)$adj.r.squared,
+    summary(model_cp)$adj.r.squared,
+    summary(forward_model)$adj.r.squared,
+    summary(backward_model)$adj.r.squared,
+    summary(stepwise_model)$adj.r.squared
+  )
+)
+
+compare_models
+```
+
+```{r}
+final_model <- stepwise_model
+
+summary(final_model)
+```
+
+```{r}
+# So sánh mô hình rút gọn và mô hình đầy đủ bằng partial F-test
+
+# Mô hình đầy đủ
+full_model <- lm(target ~ ., data = train_data)
+
+# Mô hình rút gọn
+reduced_model <- final_model
+
+nested_test <- anova(reduced_model, full_model)
+
+nested_test
+```
+
+Kiểm định F được sử dụng để so sánh mô hình rút gọn và mô hình đầy đủ:
+
+$$H_0: \beta_{age} = \beta_{hdl} = \beta_{tch} = 0$$
+
+$$H_1: \text{Có ít nhất một hệ số trong } \beta_{age}, \beta_{hdl}, \beta_{tch} \text{ khác } 0$$
+
+Trong đó, $H_0$ cho rằng ba biến bị loại khỏi mô hình rút gọn gồm `age`,
+`hdl` và `tch` không đóng góp đáng kể vào khả năng giải thích của mô
+hình. Ngược lại, $H_1$ cho rằng ít nhất một trong ba biến này có đóng
+góp đáng kể, nên mô hình đầy đủ phù hợp hơn mô hình rút gọn.
+
+Kết quả kiểm định cho p-value = 0.9904 \> 0.05, do đó không bác bỏ
+$H_0$. Điều này cho thấy việc thêm các biến `age`, `hdl` và `tch` vào mô
+hình không làm cải thiện mô hình một cách có ý nghĩa thống kê. Vì vậy,
+mô hình rút gọn được ưu tiên do đơn giản hơn nhưng không kém mô hình đầy
+đủ về mặt thống kê.
+
+## Kiểm chứng chéo Cross - Validation
+
+### Train set
+
+```{r, echo=FALSE}
+library(boot)
+
+final_formula <- formula(final_model)
+
+# Train error:
+pred_train <- predict(final_model, newdata = train_data)
+
+train_MSE <- mean((train_data$target - pred_train)^2)
+train_RMSE <- sqrt(train_MSE)
+train_MAE <- mean(abs(train_data$target - pred_train))
+
+train_R2 <- 1 - sum((train_data$target - pred_train)^2) /sum((train_data$target - mean(train_data$target))^2)
+
+#  LOOVE
+glm_final <- glm(final_formula, data = df)
+
+loocv_result <- cv.glm(df, glm_final)
+
+LOOCV_MSE <- loocv_result$delta[1]
+LOOCV_RMSE <- sqrt(LOOCV_MSE)
+
+# 5-FOLD
+set.seed(347)
+
+kfold_result <- cv.glm(df, glm_final, K = 5)
+
+KFold_MSE <- kfold_result$delta[1]
+KFold_RMSE <- sqrt(KFold_MSE)
+
+train_results <- data.frame(
+  Method = c("Train error", "LOOCV", "5-Fold CV"),
+  MSE = c(train_MSE, LOOCV_MSE, KFold_MSE),
+  RMSE = c(train_RMSE, LOOCV_RMSE, KFold_RMSE),
+  MAE = c(train_MAE, NA, NA),
+  R2 = c(train_R2, NA, NA)
+)
+
+train_results
+
+```
+
+Kết quả đánh giá trên tập huấn luyện cho thấy sai số huấn luyện của mô
+hình cuối cùng có RMSE khoảng 53.96 và MAE khoảng 43.31. Khi sử dụng các
+phương pháp kiểm chứng chéo, RMSE tăng nhẹ lên khoảng 54.52 đối với
+LOOCV và 54.84 đối với 5-Fold CV. Điều này là hợp lý vì kiểm chứng chéo
+đánh giá mô hình trên các phần dữ liệu không được dùng để huấn luyện tại
+từng lượt, nên sai số thường cao hơn train error.
+
+Sự chênh lệch giữa RMSE của train error và RMSE của LOOCV/5-Fold CV
+không quá lớn, cho thấy mô hình không có dấu hiệu quá khớp nghiêm trọng
+trên tập huấn luyện. Ngoài ra, kết quả LOOCV và 5-Fold CV khá gần nhau,
+chứng tỏ ước lượng sai số của mô hình tương đối ổn định.
+
+### Test set
+
+```{r}
+pred_test <- predict(final_model, newdata = test_data)
+
+test_MSE <- mean((test_data$target - pred_test)^2)
+test_RMSE <- sqrt(test_MSE)
+test_MAE <- mean(abs(test_data$target - pred_test))
+
+test_R2 <- 1 - sum((test_data$target - pred_test)^2) /
+  sum((test_data$target - mean(test_data$target))^2)
+
+test_results <- data.frame(
+  Method = "Test error",
+  MSE = test_MSE,
+  RMSE = test_RMSE,
+  MAE = test_MAE,
+  R2 = test_R2
+)
+
+test_results
+```
+
+Trên tập test, mô hình cuối cùng đạt MSE = 2761.934, RMSE = 52.5541, MAE
+= 43.7567 và Test $R^2 = 0.5401$. Điều này cho thấy sai số dự báo trung
+bình của mô hình vào khoảng 52.55 đơn vị nếu xét theo RMSE, và khoảng
+43.76 đơn vị nếu xét theo MAE.
+
+Giá trị Test $R^2 = 0.5401$ cho thấy mô hình giải thích được khoảng
+54.01% biến thiên của `target` trên dữ liệu chưa được sử dụng trong quá
+trình huấn luyện. So với kết quả trên tập train, RMSE trên test không
+cao hơn mà còn thấp hơn nhẹ, cho thấy mô hình có khả năng khái quát hóa
+tương đối tốt và chưa có dấu hiệu quá khớp nghiêm trọng.
