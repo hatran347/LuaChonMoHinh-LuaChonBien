@@ -1,4 +1,4 @@
-**Đặt vấn đề**
+# Đặt vấn đề
 
 Xét mô hình hồi quy tuyến tính bội với $n$ quan sát và $p$ biến dự báo:
 \begin{equation}
