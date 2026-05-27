@@ -1,7 +1,7 @@
 # LuaChonMoHinh-LuaChonBien
 Lựa chọn mô hình &amp; lựa chọn biến - Bài làm nhóm 8
 
-File ReadMe này sẽ gồm câu hỏi thảo luận & phần chia việc mà cô yêu cầu  -- cái này chắc điền vào s khi nộp ha :)
+File ReadMe này sẽ gồm câu hỏi thảo luận & phần phân công công việc mà cô yêu cầu  -- cái này chắc điền vào s khi nộp ha :)
 
 
 Mọi người sửa đúng file phần của mình trong folder parts.
