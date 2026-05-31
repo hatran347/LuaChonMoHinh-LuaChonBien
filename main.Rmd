@@ -29,10 +29,20 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
+# Render Unicode (Vietnamese) text in plots correctly.
+# The default pdf() device cannot draw Vietnamese diacritics, and cairo_pdf
+# is unavailable here (needs XQuartz). showtext draws text as glyphs from a
+# system font file, so it works on the default device with full Unicode.
+library(showtext)
+times_path <- "/System/Library/Fonts/Times.ttc"
+if (file.exists(times_path)) sysfonts::font_add("Times", regular = times_path)
+showtext_auto()
+
 knitr::opts_chunk$set(
   echo = TRUE,
   message = FALSE,
-  warning = FALSE
+  warning = FALSE,
+  fig.showtext = TRUE
 )
 ```
 
